@@ -99,52 +99,52 @@ This will send the `message` to `node`. All messages should conform to BEP 5 sta
 
 ## Events
 
-### dht.on('listening', callback)
+### `dht.on('listening', callback)`
 
 `callback` is a function that receives the dht options object. This is primarly used for logging when the server starts listening
 
-### dht.on('error', callback)
+### `dht.on('error', callback)`
 
 `callback` is a function that receives the error from the socket.
 
-### dht.on('message', callback)
+### `dht.on('message', callback)`
 
 `callback` is a function that receives the raw (becoded) `message` along with the `node` address and port
 
-### dht.on('response', callback)
+### `dht.on('response', callback)`
 
 `callback` is a function that receives any response `message`s along with the `node` address and port
 
-### dht.on('query', callback)
+### `dht.on('query', callback)`
 
 `callback` is a function that receives any query `message`s along with the `node` address and port
 
-### dht.on('getPeersResponse', callback)
+### `dht.on('getPeersResponse', callback)`
 
 `callback` is a function that receives ths get_peers response `message`s along with the `node` address and port
 
-### dht.on('findNodeResponse', callback)
+### `dht.on('findNodeResponse', callback)`
 
 `callback` is a function that receives ths find_node response `message`s along with the `node` address and port
 
-### dht.on('pingOrAnnounceResponse', callback)
+### `dht.on('pingOrAnnounceResponse', callback)`
 
 `callback` is a function that receives ths ping or announce response `message`s along with the `node` address and port
 
 _Both ping and announce response messages are identical and thus we can't discern which it is_
 
-### dht.on('findNodeQuery', callback)
+### `dht.on('findNodeQuery', callback)`
 
 `callback` is a function that receives ths find_node query `message`s along with the `node` address and port
 
-### dht.on('getPeersQuery', callback)
+### `dht.on('getPeersQuery', callback)`
 
 `callback` is a function that receives ths get_peers query `message`s along with the `node` address and port
 
-### dht.on('announcePeerQuery', callback)
+### `dht.on('announcePeerQuery', callback)`
 
 `callback` is a function that receives ths announce_peer query `message`s along with the `node` address and port
 
-### dht.on('pingQuery', callback)
+### `dht.on('pingQuery', callback)`
 
 `callback` is a function that receives ths ping query `message`s along with the `node` address and port
