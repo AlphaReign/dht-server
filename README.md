@@ -107,9 +107,13 @@ This will send the `message` to `node`. All messages should conform to BEP 5 sta
 
 `callback` is a function that receives the error from the socket.
 
-### `dht.on('message', callback)`
+### `dht.on('messageRaw', callback)`
 
 `callback` is a function that receives the raw (becoded) `message` along with the `node` address and port
+
+### `dht.on('message', callback)`
+
+`callback` is a function that receives the `message` (un-becoded) along with the `node` address and port
 
 ### `dht.on('response', callback)`
 

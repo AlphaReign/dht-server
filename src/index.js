@@ -2,9 +2,23 @@
 const EventEmitter = require('events');
 const bencode = require('bencode');
 const compactNodes = require('./utils/compact');
+const { createModel } = require('nativemodels');
 const decompactNodes = require('./utils/decompact');
-const getRandomId = require('./utils/getRandomId');
 const dgram = require('dgram');
+const getRandomId = require('./utils/getRandomId');
+
+const announcePeerArgumentsSchema = require('./models/announcePeerArguments');
+const announcePeerResponseSchema = require('./models/announcePeerResponse');
+const findNodeResponseSchema = require('./models/findNodeResponse');
+const fineNodeArgumentsSchema = require('./models/fineNodeArguments');
+const getPeersArgumentsSchema = require('./models/getPeersArguments');
+const getPeersResponseSchema = require('./models/getPeersResponse');
+const messageSchema = require('./models/message');
+const nodeSchema = require('./models/node');
+const pingArgumentsSchema = require('./models/pingArguments');
+const pingResponseSchema = require('./models/pingResponse');
+const querySchema = require('./models/query');
+const responseSchema = require('./models/response');
 
 const defaultOptions = {
 	address: '0.0.0.0',
@@ -23,10 +37,28 @@ class DHT extends EventEmitter {
 		this.options = { ...defaultOptions, ...options };
 		this.socket = dgram.createSocket('udp4');
 		this.clientId = getRandomId();
+		this.buildModels();
 		this.nodes = this.options.bootstrapNodes;
 		this.socket.on('message', (message, rinfo) => this.onMessage(message, rinfo));
 		this.socket.on('listening', () => this.onListening());
 		this.socket.on('error', (error) => this.onError(error));
+	}
+
+	buildModels() {
+		this.models = {
+			announcePeerArguments: createModel(announcePeerArgumentsSchema),
+			announcePeerResponse: createModel(announcePeerResponseSchema),
+			findNodeResponse: createModel(findNodeResponseSchema),
+			fineNodeArguments: createModel(fineNodeArgumentsSchema),
+			getPeersArguments: createModel(getPeersArgumentsSchema),
+			getPeersResponse: createModel(getPeersResponseSchema),
+			message: createModel(messageSchema),
+			node: createModel(nodeSchema),
+			pingArguments: createModel(pingArgumentsSchema),
+			pingResponse: createModel(pingResponseSchema),
+			query: createModel(querySchema),
+			response: createModel(responseSchema),
+		};
 	}
 
 	start() {
@@ -35,10 +67,7 @@ class DHT extends EventEmitter {
 
 	decodeMessage(message) {
 		try {
-			const msg = bencode.decode(message);
-
-			msg.y = msg.y && Buffer.isBuffer(msg.y) ? msg.y.toString() : msg.y;
-			msg.q = msg.q && Buffer.isBuffer(msg.q) ? msg.q.toString() : msg.q;
+			const msg = this.models.message(bencode.decode(message));
 
 			return msg;
 		} catch (error) {
@@ -51,7 +80,7 @@ class DHT extends EventEmitter {
 	}
 
 	addNode(node) {
-		this.addNodes([node]);
+		this.addNodes([this.models.node(node)]);
 	}
 
 	addNodes(nodes) {
@@ -90,8 +119,10 @@ class DHT extends EventEmitter {
 	}
 
 	onMessage(message, rinfo) {
-		this.emit('message', message, rinfo);
 		const msg = this.decodeMessage(message);
+
+		this.emit('messageRaw', message, rinfo);
+		this.emit('message', msg, rinfo);
 
 		if (msg.y === 'r') {
 			this.onResponse(msg, rinfo);
@@ -151,13 +182,20 @@ class DHT extends EventEmitter {
 		}
 	}
 
+	respond(response, rinfo) {
+		const t = this.getTransactionId();
+		const responseMessage = this.models.response({ r: response, t, y: 'r' });
+
+		this.sendMessage(responseMessage, rinfo);
+	}
+
 	onFindNodeQuery(message, rinfo) {
 		this.emit('findNodeQuery', message, rinfo);
 
 		const nodes = compactNodes(this.nodes.slice(0, 8));
-		const t = this.getTransactionId();
+		const response = this.models.findNodeResponse({ id: this.clientId, nodes });
 
-		this.sendMessage({ r: { id: this.clientId, nodes }, t, y: 'r' }, rinfo);
+		this.respond(response, rinfo);
 	}
 
 	onGetPeersQuery(message, rinfo) {
@@ -169,56 +207,66 @@ class DHT extends EventEmitter {
 				: message.a.info_hash;
 		const nodes = compactNodes(this.nodes.slice(0, 8));
 		const token = this.getToken(infoHash);
-		const t = this.getTransactionId();
+		const response = this.models.getPeersResponse({ id: this.clientId, nodes, token });
 
-		this.sendMessage({ r: { id: this.clientId, nodes, token }, t, y: 'r' }, rinfo);
+		this.respond(response, rinfo);
 	}
 
 	onAnnouncePeerQuery(message, rinfo) {
 		this.emit('announcePeerQuery', message, rinfo);
 
-		const t = this.getTransactionId();
+		const response = this.models.announcePeerResponse({ id: this.clientId });
 
-		this.sendMessage({ r: { id: this.clientId }, t, y: 'r' }, rinfo);
+		this.respond(response, rinfo);
 	}
 
 	onPingQuery(message, rinfo) {
 		this.emit('pingQuery', message, rinfo);
 
-		const t = this.getTransactionId();
+		const response = this.models.pingResponse({ id: this.clientId });
 
-		this.sendMessage({ r: { id: this.clientId }, t, y: 'r' }, rinfo);
+		this.respond(response, rinfo);
 	}
 
-	query(type, ask, rinfo) {
+	query(type, args, rinfo) {
 		const t = this.getTransactionId();
+		const message = this.models.query({ a: args, q: type, t, y: 'q' });
 
-		this.sendMessage({ a: ask, q: type, t, y: 'q' }, rinfo);
+		this.sendMessage(message, rinfo);
 	}
 
 	ping(rinfo) {
 		const sendTo = rinfo || this.nodes[0];
+		const args = this.models.pingArguments({ id: this.clientId });
 
-		this.query('ping', { id: this.clientId }, sendTo);
+		this.query('ping', args, sendTo);
 	}
 
 	findNode(nodeId, rinfo) {
 		const sendTo = rinfo || this.nodes[0];
+		const args = this.models.fineNodeArguments({ id: this.clientId, target: nodeId });
 
-		this.query('find_node', { id: this.clientId, target: nodeId }, sendTo);
+		this.query('find_node', args, sendTo);
 	}
 
 	getPeers(infoHash, rinfo) {
 		const sendTo = rinfo || this.nodes[0];
+		const args = this.models.getPeersArguments({ id: this.clientId, info_hash: infoHash });
 
-		this.query('get_peers', { id: this.clientId, info_hash: infoHash }, sendTo);
+		this.query('get_peers', args, sendTo);
 	}
 
 	announcePeer(infoHash, rinfo) {
 		const sendTo = rinfo || this.nodes[0];
 		const token = this.getToken(infoHash);
+		const args = this.models.announcePeerArguments({
+			id: this.clientId,
+			implied_port: true,
+			info_hash: infoHash,
+			token,
+		});
 
-		this.query('announce_peer', { id: this.clientId, implied_port: true, info_hash: infoHash, token }, sendTo);
+		this.query('announce_peer', args, sendTo);
 	}
 }
 

@@ -1413,6 +1413,11 @@ nanomatch@^1.2.9:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
+nativemodels@^2.5.1:
+  version "2.5.1"
+  resolved "https://registry.yarnpkg.com/nativemodels/-/nativemodels-2.5.1.tgz#a4c6807c643ec7a428303cfcbe5b6b276ea76f04"
+  integrity sha512-pYsx54QMjk1e4n3EhKkqJfuMsBaeUkIjYQtSzVEZutwIVrOhCleJeKF1sWsIWdiZPjVTfato/smbRLRToOsFbQ==
+
 natural-compare@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
