@@ -15,6 +15,7 @@ const getPeersArgumentsSchema = require('./models/getPeersArguments');
 const getPeersResponseSchema = require('./models/getPeersResponse');
 const messageSchema = require('./models/message');
 const nodeSchema = require('./models/node');
+const optionsSchema = require('./models/options');
 const pingArgumentsSchema = require('./models/pingArguments');
 const pingResponseSchema = require('./models/pingResponse');
 const querySchema = require('./models/query');
@@ -34,10 +35,10 @@ const defaultOptions = {
 class DHT extends EventEmitter {
 	constructor(options = {}) {
 		super();
-		this.options = { ...defaultOptions, ...options };
+		this.buildModels();
+		this.options = this.models.options({ ...defaultOptions, ...options });
 		this.socket = dgram.createSocket('udp4');
 		this.clientId = getRandomId();
-		this.buildModels();
 		this.nodes = this.options.bootstrapNodes;
 		this.socket.on('message', (message, rinfo) => this.onMessage(message, rinfo));
 		this.socket.on('listening', () => this.onListening());
@@ -54,6 +55,7 @@ class DHT extends EventEmitter {
 			getPeersResponse: createModel(getPeersResponseSchema),
 			message: createModel(messageSchema),
 			node: createModel(nodeSchema),
+			options: createModel(optionsSchema),
 			pingArguments: createModel(pingArgumentsSchema),
 			pingResponse: createModel(pingResponseSchema),
 			query: createModel(querySchema),
